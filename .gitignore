@@ -1,0 +1,22 @@
+# Session files
+*.session*
+
+# Credentials
+credentials.txt
+config.ini
+config.py
+telegram_config.json
+telegram_forwarder.log
+chats_of_*.txt
+
+# Cache files
+__pycache__/
+*.pyc
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# System-specific files
+.DS_Store
+Thumbs.db
