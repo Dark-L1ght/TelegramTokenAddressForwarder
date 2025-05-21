@@ -135,7 +135,8 @@ class TelegramForwarder:
                 
                 if event.message.text:
                     # Look for token pattern in the message text
-                    match = re.search(r'\b[a-zA-Z0-9]{44}\b', event.message.text)
+                    # Updated regex to detect 43 or 44 character tokens
+                    match = re.search(r'\b[a-zA-Z0-9]{43,44}\b', event.message.text)
                     
                     if match:
                         token = match.group()
