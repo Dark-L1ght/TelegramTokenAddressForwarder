@@ -7,7 +7,7 @@ import sys
 import signal
 from telethon import TelegramClient, events, errors
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 
 # Set up logging
 logging.basicConfig(
@@ -30,6 +30,11 @@ class TelegramForwarder:
         self.source_entities = {}  # Cache for source chat entities
         self.running = True
         
+        # Token tracking for duplicate detection
+        self.processed_tokens = set()
+        self.token_history_file = f'token_history_{phone_number}.json'
+        self.load_token_history()
+        
         # Configure the client to handle disconnections
         self.client.flood_sleep_threshold = 60  # Sleep if hit by flood wait
         
@@ -41,8 +46,37 @@ class TelegramForwarder:
         """Handle shutdown signals gracefully"""
         logger.info("Shutdown signal received, stopping forwarder...")
         self.running = False
+        self.save_token_history()  # Save tokens before shutting down
         if self.client.is_connected():
             asyncio.create_task(self.client.disconnect())
+    
+    def load_token_history(self):
+        """Load previously processed tokens from file"""
+        try:
+            if os.path.exists(self.token_history_file):
+                with open(self.token_history_file, 'r') as f:
+                    token_data = json.load(f)
+                    self.processed_tokens = set(token_data.get('tokens', []))
+                    logger.info(f"Loaded {len(self.processed_tokens)} tokens from history")
+            else:
+                logger.info("No token history file found, starting with empty history")
+                self.processed_tokens = set()
+        except Exception as e:
+            logger.error(f"Error loading token history: {str(e)}")
+            self.processed_tokens = set()
+    
+    def save_token_history(self):
+        """Save processed tokens to file"""
+        try:
+            token_data = {
+                'tokens': list(self.processed_tokens),
+                'last_updated': datetime.now().isoformat()
+            }
+            with open(self.token_history_file, 'w') as f:
+                json.dump(token_data, f)
+            logger.info(f"Saved {len(self.processed_tokens)} tokens to history file")
+        except Exception as e:
+            logger.error(f"Error saving token history: {str(e)}")
             
     async def ensure_connected(self) -> bool:
         """Ensure client is connected and authorized with error handling"""
@@ -124,6 +158,7 @@ class TelegramForwarder:
             
         dest_name = await self.get_chat_name(destination_chat_id)
         logger.info(f"Forwarding to destination: {dest_name} (ID: {destination_chat_id})")
+        logger.info(f"Duplicate detection enabled - loaded {len(self.processed_tokens)} tokens into memory")
 
         # Set up the event handler for new messages
         @self.client.on(events.NewMessage(chats=source_chat_ids))
@@ -140,7 +175,20 @@ class TelegramForwarder:
                     
                     if match:
                         token = match.group()
-                        logger.info(f"Found token: {token} in {source_name}")
+                        
+                        # Check if this token has already been processed
+                        if token in self.processed_tokens:
+                            logger.info(f"Duplicate token detected: {token[:8]}... from {source_name} - skipping")
+                            return
+                            
+                        logger.info(f"Found new token: {token[:8]}... in {source_name}")
+                        
+                        # Add to processed tokens
+                        self.processed_tokens.add(token)
+                        
+                        # Save token history periodically
+                        if len(self.processed_tokens) % 10 == 0:  # Save every 10 new tokens
+                            self.save_token_history()
                         
                         # Format a cleaner message for forwarding
                         forward_msg = f"{token}"
@@ -161,6 +209,15 @@ class TelegramForwarder:
         # Keep the client running
         while self.running:
             await asyncio.sleep(1)
+            
+        # Save token history before exiting
+        self.save_token_history()
+
+    async def clear_token_history(self):
+        """Clear the token history (for administrative purposes)"""
+        self.processed_tokens = set()
+        self.save_token_history()
+        logger.info("Token history cleared")
 
 class ConfigManager:
     """Handle configuration storing and loading"""
@@ -233,7 +290,7 @@ class ConfigManager:
             return None, None
 
 async def main():
-    logger.info("Starting Telegram Forwarder")
+    logger.info("Starting Telegram Forwarder with Duplicate Detection")
     
     # Initialize config manager
     config_manager = ConfigManager()
@@ -258,9 +315,10 @@ async def main():
     print("1. List All Chats")
     print("2. Forward Messages from Multiple Sources")
     print("3. Use Saved Configuration")
-    print("4. Exit")
+    print("4. Clear Token History")
+    print("5. Exit")
     
-    choice = input("\nEnter your choice (1-4): ")
+    choice = input("\nEnter your choice (1-5): ")
     
     try:
         if choice == "1":
@@ -298,6 +356,14 @@ async def main():
             await forwarder.setup_message_handlers(source_chat_ids, destination_chat_id)
             
         elif choice == "4":
+            confirmation = input("Are you sure you want to clear the token history? (y/n): ")
+            if confirmation.lower() == 'y':
+                await forwarder.clear_token_history()
+                logger.info("Token history cleared successfully")
+            else:
+                logger.info("Token history clear operation cancelled")
+                
+        elif choice == "5":
             logger.info("Exiting...")
             return
             
