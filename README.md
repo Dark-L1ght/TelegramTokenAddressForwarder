@@ -1,6 +1,6 @@
 # Telegram Token Contract Address Autoforwarder
 
-The Telegram Token Contract Address Autoforwarder is a Python script that allows you to automatically forward Contract Addresses from one chat (group or channel) to another. It works with both groups and channels, requiring only the necessary permissions to access the messages.
+The Telegram Token Contract Address Autoforwarder is a Python script that allows you to automatically forward Contract Addresses from one chat (group or channel) to another. It works with both groups and channels, requiring only the necessary permissions to access the messages.<br>
 This Repository is a Clone of [Telegram-Autoforwarder](https://github.com/redianmarku/Telegram-Autoforwarder), With a modification from myself.
 
 ## Features
@@ -19,8 +19,8 @@ The script uses the Telethon library to interact with the Telegram API. You prov
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/Dark-L1ght/TelegramAutoForwarder.git
-   cd Telegram-Autoforwarder
+   git clone https://github.com/Dark-L1ght/TelegramTokenAddressForwarder.git
+   cd TelegramTokenAddressForwarder
    ```
 
 2. Install the required dependencies:
@@ -31,13 +31,13 @@ The script uses the Telethon library to interact with the Telegram API. You prov
 
 3. Configure the script:
 
-   - Open `TelegramForwarder.py` file and provide your Telegram API ID, API hash, and phone number in the appropriate variables.
+   - Open `telegramForwarder.py` file and provide your Telegram API ID, API hash, and phone number in the appropriate variables.
    - Modify other settings as needed directly in the script.
 
 4. Run the script:
 
    ```bash
-   python TelegramForwarder.py
+   python telegramForwarder.py
    ```
 
 5. Choose an option:
